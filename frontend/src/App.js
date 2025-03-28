@@ -1,6 +1,6 @@
-import ReactMarkdown from 'react-markdown';
 import React, { useState } from 'react';
-import axios from 'react-markdown';
+import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 
 function App() {
   const [file, setFile] = useState(null);
@@ -10,8 +10,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleUpload = async () => {
-    if (!file) return;
-    
+    if (!file) {
+      alert('Please select a PDF file first!');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('pdf', file);
 
@@ -23,22 +26,34 @@ function App() {
         }
       });
       setIsUploaded(true);
+      alert('PDF uploaded successfully!');
     } catch (err) {
-      alert('Upload failed!');
+      console.error('Upload error:', err);
+      alert(`Upload failed: ${err.response?.data?.message || err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAsk = async () => {
-    if (!question.trim()) return;
-    
+    if (!question.trim()) {
+      alert('Please enter a question');
+      return;
+    }
+    if (!isUploaded) {
+      alert('Please upload a PDF first');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const res = await axios.post('http://localhost:5000/ask', { question });
+      const res = await axios.post('http://localhost:5000/ask', {
+        question: question.trim()
+      });
       setAnswer(res.data.answer);
     } catch (err) {
-      alert('Error asking question');
+      console.error('Question error:', err);
+      alert(`Error: ${err.response?.data?.error || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -53,26 +68,30 @@ function App() {
         <h2>Upload PDF</h2>
         <input 
           type="file" 
-          accept=".pdf" 
+          accept=".pdf"
           onChange={(e) => setFile(e.target.files[0])} 
         />
-        <button onClick={handleUpload} disabled={!file || isLoading}>
+        <button 
+          onClick={handleUpload}
+          disabled={!file || isLoading}
+        >
           {isLoading ? 'Uploading...' : 'Upload'}
         </button>
-        {isUploaded && <p>PDF uploaded successfully!</p>}
+        {isUploaded && <p style={{ color: 'green' }}>✓ PDF Ready</p>}
       </div>
 
       {/* Question Input */}
       <div style={{ marginBottom: '20px' }}>
-        <h2>Ask a Question</h2>
+        <h2>Ask Question</h2>
         <textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask about the PDF..."
-          style={{ width: '100%', minHeight: '100px', marginBottom: '10px' }}
+          style={{ width: '100%', minHeight: '100px' }}
+          disabled={!isUploaded}
         />
-        <button 
-          onClick={handleAsk} 
+        <button
+          onClick={handleAsk}
           disabled={!isUploaded || isLoading}
         >
           {isLoading ? 'Processing...' : 'Ask'}
@@ -84,7 +103,8 @@ function App() {
         <div style={{ 
           backgroundColor: '#f5f5f5', 
           padding: '15px', 
-          borderRadius: '5px' 
+          borderRadius: '5px',
+          marginTop: '20px'
         }}>
           <h3>Answer:</h3>
           <ReactMarkdown>{answer}</ReactMarkdown>
